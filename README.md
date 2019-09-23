@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/polyverse/timeout-iterator.svg?branch=master)](https://travis-ci.org/polyverse/timeout-iterator)
+
 # timeout-iterator
 
 `timeout_iterator::TimeoutIterator` is a wrapper over any iterator that adds two additional functions:
