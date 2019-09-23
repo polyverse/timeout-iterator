@@ -193,23 +193,35 @@ r"1
         let timeout_result = ti.next_timeout(Duration::from_secs(1));
         assert!(timeout_result.is_err());
     }
+
+
+    #[test]
+    fn item_iterator() {
+        let numbers: Vec<u32> = vec![1, 2, 3, 4, 5];
+        let mut ti = TimeoutIterator::from_item_iterator(numbers.into_iter(), 0);
+
+        assert_eq!(ti.next().unwrap(), 1);
+        assert_eq!(ti.next().unwrap(), 2);
+        assert_eq!(*ti.peek_timeout(Duration::from_secs(1)).ok().unwrap(), 3);
+        assert_eq!(ti.next().unwrap(), 3);
+        assert_eq!(ti.next().unwrap(), 4);
+        assert_eq!(*ti.peek_timeout(Duration::from_secs(1)).ok().unwrap(), 5);
+        assert_eq!(*ti.peek_timeout(Duration::from_secs(1)).ok().unwrap(), 5);
+        assert_eq!(ti.next().unwrap(), 5);
+
+        let timeout_result = ti.next_timeout(Duration::from_secs(1));
+        assert!(timeout_result.is_err());
+    }
+
+    #[test]
+    fn is_sendable() {
+        let numbers: Vec<u32> = vec![1, 2, 3, 4, 5];
+        let mut ti = TimeoutIterator::from_item_iterator(numbers.into_iter(), 0);
+        thread::spawn(move || {
+            ti.next();
+        });
+        assert!(true, "If this compiles, TimeoutIterator is Send'able across threads.");
+    }
 }
 
-#[test]
-fn item_iterator() {
-    let numbers: Vec<u32> = vec![1, 2, 3, 4, 5];
-    let mut ti = TimeoutIterator::from_item_iterator(numbers.into_iter(), 0);
-
-    assert_eq!(ti.next().unwrap(), 1);
-    assert_eq!(ti.next().unwrap(), 2);
-    assert_eq!(*ti.peek_timeout(Duration::from_secs(1)).ok().unwrap(), 3);
-    assert_eq!(ti.next().unwrap(), 3);
-    assert_eq!(ti.next().unwrap(), 4);
-    assert_eq!(*ti.peek_timeout(Duration::from_secs(1)).ok().unwrap(), 5);
-    assert_eq!(*ti.peek_timeout(Duration::from_secs(1)).ok().unwrap(), 5);
-    assert_eq!(ti.next().unwrap(), 5);
-
-    let timeout_result = ti.next_timeout(Duration::from_secs(1));
-    assert!(timeout_result.is_err());
-}
 
