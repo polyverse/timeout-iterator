@@ -84,7 +84,7 @@ where T: Send + 'static {
                 mpsc::RecvTimeoutError::Timeout => Err(TimeoutIteratorError::Timeout),
                 mpsc::RecvTimeoutError::Disconnected => Err(TimeoutIteratorError::Disconnected)
             }
-        }            
+        }
     }
 
     pub fn peek_timeout(&mut self, timeout: Duration) -> Result<&T, TimeoutIteratorError> {
@@ -95,10 +95,23 @@ where T: Send + 'static {
                     mpsc::RecvTimeoutError::Timeout => return Err(TimeoutIteratorError::Timeout),
                     mpsc::RecvTimeoutError::Disconnected => return Err(TimeoutIteratorError::Disconnected)
                 }
-            }   
+            }
         };
 
         Ok(self.buffer.first().unwrap())
+    }
+
+    pub fn peek(&mut self) -> Option<&T> {
+        if self.buffer.is_empty() {
+            match self.next() {
+                Some(item) => self.buffer.push(item),
+                None => {
+                    return None;
+                } 
+            }
+        };
+
+        Some(self.buffer.first().unwrap())
     }
 }
 
@@ -171,7 +184,7 @@ r"1
     }
 
         #[test]
-    fn peek_doesnt_remove() {
+    fn peek_timeout_doesnt_remove() {
         let realistic_message = 
 r"1
 2
@@ -194,6 +207,30 @@ r"1
         assert!(timeout_result.is_err());
     }
 
+
+        #[test]
+    fn peek_doesnt_remove() {
+        let realistic_message = 
+r"1
+2
+3
+4
+5";
+        let lines_iterator = (Box::new(realistic_message.as_bytes()) as Box<dyn BufRead + Send>).lines();
+        let mut ti = TimeoutIterator::from_result_iterator(lines_iterator, 0);
+
+        assert_eq!(ti.next().unwrap(), "1");
+        assert_eq!(ti.next().unwrap(), "2");
+        assert_eq!(ti.peek().unwrap(), "3");
+        assert_eq!(ti.next().unwrap(), "3");
+        assert_eq!(ti.next().unwrap(), "4");
+        assert_eq!(ti.peek().unwrap(), "5");
+        assert_eq!(ti.peek().unwrap(), "5");
+        assert_eq!(ti.next().unwrap(), "5");
+
+        let timeout_result = ti.next_timeout(Duration::from_secs(1));
+        assert!(timeout_result.is_err());
+    }
 
     #[test]
     fn item_iterator() {
