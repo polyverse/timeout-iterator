@@ -1,6 +1,6 @@
 [package]
 name = "timeout-iterator"
-version = "0.2.0"
+version = "0.3.0"
 authors = ["Archis Gore <archis@polyverse.io>"]
 edition = "2018"
 license-file = "LICENSE"
