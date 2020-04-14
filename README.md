@@ -6,7 +6,7 @@
 * peek_timeout()
 * next_timeout()
 
-The canonical use-case is parsing multi-line free-form records (such as tailing a log fime) where it is desirable to 
+The canonical use-case is parsing multi-line free-form records (such as tailing a log fime) where it is desirable to
 consume the very last line, and peek whether the record continues on the next time, without blocking indefinitely on the peek().
 
 This was built for parsing Kernel logs from `/dev/kmsg` for instance. A kernel log record may look like this:
@@ -33,27 +33,27 @@ The item iterator is obvious and intuitive:
 use timeout_iterator::TimeoutIterator;
 
 let numbers: Vec<u32> = vec![1, 2, 3, 4, 5];
-let mut ti = TimeoutIterator::from_item_iterator(numbers.into_iter(), 0);
+let mut ti = TimeoutIterator::from_item_iterator(numbers.into_iter(), 0).unwrap();
 ```
 
 This will iterate over all the integers in the Vector.
 
 ## The Result Iterator
 
-Occasionally, your downstream iterator returns a Result<Item, _>, such as when 
+Occasionally, your downstream iterator returns a Result<Item, _>, such as when
 we read lines from a BufRead and we have to unwrap twice:
 
 ```
 use timeout_iterator::TimeoutIterator;
 use std::io::prelude::BufRead;
 
-let logmessage = 
+let logmessage =
 r"6,361,518496,-;ahci 0000:00:05.0: AHCI 0001.0300 32 slots 6 ports 6 Gbps 0x1 impl SATA mode
 SUBSYSTEM=pci
 DEVICE=+pci:0000:00:05.0";
 
 let mut lines_iterator = (Box::new(logmessage.as_bytes()) as Box<dyn BufRead + Send>).lines();
-let result = lines_iterator.next()    
+let result = lines_iterator.next()
     .unwrap() // open the timeout iterator option
     .ok() // open the line-iterator result
     .unwrap(); // open the line-iterator option
@@ -69,13 +69,13 @@ use timeout_iterator::TimeoutIterator;
 use std::io::prelude::BufRead;
 use std::time::Duration;
 
-let logmessage = 
+let logmessage =
 r"6,361,518496,-;ahci 0000:00:05.0: AHCI 0001.0300 32 slots 6 ports 6 Gbps 0x1 impl SATA mode
 SUBSYSTEM=pci
 DEVICE=+pci:0000:00:05.0";
 
 let mut lines_iterator = (Box::new(logmessage.as_bytes()) as Box<dyn BufRead + Send>).lines();
-let mut ti = TimeoutIterator::from_item_iterator(lines_iterator, 0);
+let mut ti = TimeoutIterator::from_item_iterator(lines_iterator, 0).unwrap();
 let result = ti.next_timeout(Duration::from_secs(1))
     .ok() // open the timeout iterator result
     .unwrap() // open the timeout iterator option
@@ -85,19 +85,19 @@ let result = ti.next_timeout(Duration::from_secs(1))
 assert_eq!(result, "6,361,518496,-;ahci 0000:00:05.0: AHCI 0001.0300 32 slots 6 ports 6 Gbps 0x1 impl SATA mode");
 ```
 
-Knowing that the inner iterator provides `Result<Option<Foo>>`, we can tell the TimeoutIterator to 
+Knowing that the inner iterator provides `Result<Option<Foo>>`, we can tell the TimeoutIterator to
 flatten it all into this:
 ```
 use timeout_iterator::TimeoutIterator;
 use std::io::prelude::BufRead;
 
-let logmessage = 
+let logmessage =
 r"6,361,518496,-;ahci 0000:00:05.0: AHCI 0001.0300 32 slots 6 ports 6 Gbps 0x1 impl SATA mode
 SUBSYSTEM=pci
 DEVICE=+pci:0000:00:05.0";
 
 let mut lines_iterator = (Box::new(logmessage.as_bytes()) as Box<dyn BufRead + Send>).lines();
-let mut ti = TimeoutIterator::from_result_iterator(lines_iterator, 0);
+let mut ti = TimeoutIterator::from_result_iterator(lines_iterator, 0).unwrap();
 
 let result = ti.next()
     .unwrap(); // single unwrap of Option
@@ -126,7 +126,7 @@ use timeout_iterator::TimeoutIterator;
 use std::io::prelude::BufRead;
 use std::time::Duration;
 
-let logmessage = 
+let logmessage =
 r"6,361,518496,-;ahci 0000:00:05.0: AHCI 0001.0300 32 slots 6 ports 6 Gbps 0x1 impl SATA mode
   SUBSYSTEM=pci
   DEVICE=+pci:0000:00:05.0
@@ -134,7 +134,7 @@ r"6,361,518496,-;ahci 0000:00:05.0: AHCI 0001.0300 32 slots 6 ports 6 Gbps 0x1 i
   DEVICE=+pci:0000:00:05.0";
 
 let mut lines_iterator = (Box::new(logmessage.as_bytes()) as Box<dyn BufRead + Send>).lines();
-let mut ti = TimeoutIterator::from_result_iterator(lines_iterator, 0);
+let mut ti = TimeoutIterator::from_result_iterator(lines_iterator, 0).unwrap();
 
 let mut records: Vec<String> = vec![];
 

@@ -2,36 +2,68 @@
 extern crate doc_comment;
 
 doc_comment!(include_str!("../README.md"));
-use std::sync::mpsc::{Sender, Receiver};
-use std::sync::mpsc;
-use std::thread;
-use std::time::{Duration};
-use std::result;
+use std::error::Error;
 use std::fmt;
+use std::fmt::{Formatter, Result as FmtResult};
+use std::result;
+use std::sync::mpsc;
+use std::sync::mpsc::{Receiver, Sender};
+use std::thread;
+use std::time::Duration;
 
+#[derive(Debug)]
 pub enum TimeoutIteratorError {
+    ErrorSpawningThread(std::io::Error),
     Timeout,
     Disconnected,
 }
-
+impl Error for TimeoutIteratorError {}
+impl fmt::Display for TimeoutIteratorError {
+    fn fmt(&self, f: &mut Formatter) -> FmtResult {
+        write!(
+            f,
+            "TimeoutIteratorError:: {}",
+            match self {
+                TimeoutIteratorError::Timeout =>
+                    "Iterator Timed out waiting on channel source".to_owned(),
+                TimeoutIteratorError::Disconnected => "Iterator channel disconnected".to_owned(),
+                TimeoutIteratorError::ErrorSpawningThread(e) => format!(
+                    "Error when spawing a thread for sinking events. Inner io::Error: {}",
+                    e
+                ),
+            }
+        )
+    }
+}
+impl From<std::io::Error> for TimeoutIteratorError {
+    fn from(err: std::io::Error) -> TimeoutIteratorError {
+        TimeoutIteratorError::ErrorSpawningThread(err)
+    }
+}
 pub struct TimeoutIterator<T> {
     source: Receiver<T>,
     buffer: Vec<T>,
     verbosity: u8,
 }
 
-impl<T> TimeoutIterator<T> 
-where T: Send + 'static {
-
+impl<T> TimeoutIterator<T>
+where
+    T: Send + 'static,
+{
     /**
-     * Use this constructor 
+     * Use this constructor
      */
-    pub fn from_result_iterator<R, E>(reader: R, verbosity: u8) -> TimeoutIterator<T>
-    where R: Iterator<Item = result::Result<T, E>> + Send + 'static,
-        E: fmt::Display + fmt::Debug {
-        let (sink, source) : (Sender<T>, Receiver<T>) = mpsc::channel();
+    pub fn from_result_iterator<R, E>(
+        reader: R,
+        verbosity: u8,
+    ) -> Result<TimeoutIterator<T>, TimeoutIteratorError>
+    where
+        R: Iterator<Item = result::Result<T, E>> + Send + 'static,
+        E: fmt::Display + fmt::Debug,
+    {
+        let (sink, source): (Sender<T>, Receiver<T>) = mpsc::channel();
 
-        thread::spawn(move || {
+        thread::Builder::new().name("TimeoutIterator::sender".to_owned()).spawn(move || {
             for maybe_item in reader {
                 match maybe_item {
                     Ok(item) => if let Err(e) = sink.send(item) {
@@ -44,33 +76,38 @@ where T: Send + 'static {
                     }
                 }
             }
-        });
+        })?;
 
-        TimeoutIterator {
+        Ok(TimeoutIterator {
             source,
             verbosity,
-            buffer: Vec::new()
-        }
+            buffer: Vec::new(),
+        })
     }
 
-    pub fn from_item_iterator<R>(reader: R, verbosity: u8) -> TimeoutIterator<T>
-    where R: Iterator<Item = T> + Send + 'static {
-        let (sink, source) : (Sender<T>, Receiver<T>) = mpsc::channel();
+    pub fn from_item_iterator<R>(
+        reader: R,
+        verbosity: u8,
+    ) -> Result<TimeoutIterator<T>, TimeoutIteratorError>
+    where
+        R: Iterator<Item = T> + Send + 'static,
+    {
+        let (sink, source): (Sender<T>, Receiver<T>) = mpsc::channel();
 
-        thread::spawn(move || {
+        thread::Builder::new().name("TimeoutIterator::sender".to_owned()).spawn(move || {
             for item in reader {
                 if let Err(e) = sink.send(item) {
                     if verbosity > 0 { eprintln!("TimeoutIterator:: Error sending data to channel. Receiver may have closed. Closing up sender. Error: {}", e); }
                     return;
                 }
             }
-        });
+        })?;
 
-        TimeoutIterator {
+        Ok(TimeoutIterator {
             source,
             verbosity,
-            buffer: Vec::new()
-        }
+            buffer: Vec::new(),
+        })
     }
 
     pub fn next_timeout(&mut self, timeout: Duration) -> Result<T, TimeoutIteratorError> {
@@ -82,8 +119,8 @@ where T: Send + 'static {
             Ok(item) => Ok(item),
             Err(e) => match e {
                 mpsc::RecvTimeoutError::Timeout => Err(TimeoutIteratorError::Timeout),
-                mpsc::RecvTimeoutError::Disconnected => Err(TimeoutIteratorError::Disconnected)
-            }
+                mpsc::RecvTimeoutError::Disconnected => Err(TimeoutIteratorError::Disconnected),
+            },
         }
     }
 
@@ -93,8 +130,10 @@ where T: Send + 'static {
                 Ok(item) => self.buffer.push(item),
                 Err(e) => match e {
                     mpsc::RecvTimeoutError::Timeout => return Err(TimeoutIteratorError::Timeout),
-                    mpsc::RecvTimeoutError::Disconnected => return Err(TimeoutIteratorError::Disconnected)
-                }
+                    mpsc::RecvTimeoutError::Disconnected => {
+                        return Err(TimeoutIteratorError::Disconnected)
+                    }
+                },
             }
         };
 
@@ -107,14 +146,13 @@ where T: Send + 'static {
                 Some(item) => self.buffer.push(item),
                 None => {
                     return None;
-                } 
+                }
             }
         };
 
         Some(self.buffer.first().unwrap())
     }
 }
-
 
 impl<T> Iterator for TimeoutIterator<T> {
     type Item = T;
@@ -124,12 +162,13 @@ impl<T> Iterator for TimeoutIterator<T> {
         };
 
         match self.source.recv() {
-            Ok(item) => {
-                Some(item)
-            },
+            Ok(item) => Some(item),
             Err(e) => {
                 if self.verbosity > 0 {
-                    eprintln!("TimeoutIterator:: Error occurred reading from source: {}.", e);
+                    eprintln!(
+                        "TimeoutIterator:: Error occurred reading from source: {}.",
+                        e
+                    );
                 }
                 None
             }
@@ -139,20 +178,20 @@ impl<T> Iterator for TimeoutIterator<T> {
 
 #[cfg(test)]
 mod tests {
-    use std::io::prelude::*;
     use super::*;
+    use std::io::prelude::*;
 
     #[test]
     fn iterates() {
-        let realistic_message = 
-r"1
+        let realistic_message = r"1
 2
 3
 4
 5";
-        let lines_iterator = (Box::new(realistic_message.as_bytes()) as Box<dyn BufRead + Send>).lines();
+        let lines_iterator =
+            (Box::new(realistic_message.as_bytes()) as Box<dyn BufRead + Send>).lines();
 
-        let mut ti = TimeoutIterator::from_result_iterator(lines_iterator, 0);
+        let mut ti = TimeoutIterator::from_result_iterator(lines_iterator, 0).unwrap();
 
         assert_eq!(ti.next().unwrap(), "1");
         assert_eq!(ti.next().unwrap(), "2");
@@ -163,15 +202,15 @@ r"1
 
     #[test]
     fn next_timeout() {
-        let realistic_message = 
-r"1
+        let realistic_message = r"1
 2
 3
 4
 5";
-        let lines_iterator = (Box::new(realistic_message.as_bytes()) as Box<dyn BufRead + Send>).lines();
+        let lines_iterator =
+            (Box::new(realistic_message.as_bytes()) as Box<dyn BufRead + Send>).lines();
 
-        let mut ti = TimeoutIterator::from_result_iterator(lines_iterator, 0);
+        let mut ti = TimeoutIterator::from_result_iterator(lines_iterator, 0).unwrap();
 
         assert_eq!(ti.next().unwrap(), "1");
         assert_eq!(ti.next().unwrap(), "2");
@@ -183,16 +222,16 @@ r"1
         assert!(timeout_result.is_err());
     }
 
-        #[test]
+    #[test]
     fn peek_timeout_doesnt_remove() {
-        let realistic_message = 
-r"1
+        let realistic_message = r"1
 2
 3
 4
 5";
-        let lines_iterator = (Box::new(realistic_message.as_bytes()) as Box<dyn BufRead + Send>).lines();
-        let mut ti = TimeoutIterator::from_result_iterator(lines_iterator, 0);
+        let lines_iterator =
+            (Box::new(realistic_message.as_bytes()) as Box<dyn BufRead + Send>).lines();
+        let mut ti = TimeoutIterator::from_result_iterator(lines_iterator, 0).unwrap();
 
         assert_eq!(ti.next().unwrap(), "1");
         assert_eq!(ti.next().unwrap(), "2");
@@ -207,17 +246,16 @@ r"1
         assert!(timeout_result.is_err());
     }
 
-
-        #[test]
+    #[test]
     fn peek_doesnt_remove() {
-        let realistic_message = 
-r"1
+        let realistic_message = r"1
 2
 3
 4
 5";
-        let lines_iterator = (Box::new(realistic_message.as_bytes()) as Box<dyn BufRead + Send>).lines();
-        let mut ti = TimeoutIterator::from_result_iterator(lines_iterator, 0);
+        let lines_iterator =
+            (Box::new(realistic_message.as_bytes()) as Box<dyn BufRead + Send>).lines();
+        let mut ti = TimeoutIterator::from_result_iterator(lines_iterator, 0).unwrap();
 
         assert_eq!(ti.next().unwrap(), "1");
         assert_eq!(ti.next().unwrap(), "2");
@@ -235,7 +273,7 @@ r"1
     #[test]
     fn item_iterator() {
         let numbers: Vec<u32> = vec![1, 2, 3, 4, 5];
-        let mut ti = TimeoutIterator::from_item_iterator(numbers.into_iter(), 0);
+        let mut ti = TimeoutIterator::from_item_iterator(numbers.into_iter(), 0).unwrap();
 
         assert_eq!(ti.next().unwrap(), 1);
         assert_eq!(ti.next().unwrap(), 2);
@@ -253,12 +291,13 @@ r"1
     #[test]
     fn is_sendable() {
         let numbers: Vec<u32> = vec![1, 2, 3, 4, 5];
-        let mut ti = TimeoutIterator::from_item_iterator(numbers.into_iter(), 0);
+        let mut ti = TimeoutIterator::from_item_iterator(numbers.into_iter(), 0).unwrap();
         thread::spawn(move || {
             ti.next();
         });
-        assert!(true, "If this compiles, TimeoutIterator is Send'able across threads.");
+        assert!(
+            true,
+            "If this compiles, TimeoutIterator is Send'able across threads."
+        );
     }
 }
-
-
