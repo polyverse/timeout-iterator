@@ -43,7 +43,6 @@ impl From<std::io::Error> for TimeoutIteratorError {
 pub struct TimeoutIterator<T> {
     source: Receiver<T>,
     buffer: Vec<T>,
-    verbosity: u8,
 }
 
 impl<T> TimeoutIterator<T>
@@ -55,7 +54,6 @@ where
      */
     pub fn from_result_iterator<R, E>(
         reader: R,
-        verbosity: u8,
     ) -> Result<TimeoutIterator<T>, TimeoutIteratorError>
     where
         R: Iterator<Item = result::Result<T, E>> + Send + 'static,
@@ -67,11 +65,11 @@ where
             for maybe_item in reader {
                 match maybe_item {
                     Ok(item) => if let Err(e) = sink.send(item) {
-                        if verbosity > 0 { eprintln!("TimeoutIterator:: Error sending data to channel. Receiver may have closed. Closing up sender. Error: {}", e); }
+                        eprintln!("TimeoutIterator:: Error sending data to channel. Receiver may have closed. Closing up sender. Error: {}", e);
                         return;
                     },
                     Err(e) => {
-                        if verbosity > 0 { eprintln!("TimeoutIterator:: Error reading from source iterator. Closing reader. Error: {}", e); }
+                        eprintln!("TimeoutIterator:: Error reading from source iterator. Closing reader. Error: {}", e);
                         return;
                     }
                 }
@@ -80,14 +78,12 @@ where
 
         Ok(TimeoutIterator {
             source,
-            verbosity,
             buffer: Vec::new(),
         })
     }
 
     pub fn from_item_iterator<R>(
         reader: R,
-        verbosity: u8,
     ) -> Result<TimeoutIterator<T>, TimeoutIteratorError>
     where
         R: Iterator<Item = T> + Send + 'static,
@@ -97,7 +93,7 @@ where
         thread::Builder::new().name("TimeoutIterator::sender".to_owned()).spawn(move || {
             for item in reader {
                 if let Err(e) = sink.send(item) {
-                    if verbosity > 0 { eprintln!("TimeoutIterator:: Error sending data to channel. Receiver may have closed. Closing up sender. Error: {}", e); }
+                    eprintln!("TimeoutIterator:: Error sending data to channel. Receiver may have closed. Closing up sender. Error: {}", e);
                     return;
                 }
             }
@@ -105,7 +101,6 @@ where
 
         Ok(TimeoutIterator {
             source,
-            verbosity,
             buffer: Vec::new(),
         })
     }
@@ -164,12 +159,10 @@ impl<T> Iterator for TimeoutIterator<T> {
         match self.source.recv() {
             Ok(item) => Some(item),
             Err(e) => {
-                if self.verbosity > 0 {
-                    eprintln!(
-                        "TimeoutIterator:: Error occurred reading from source: {}.",
-                        e
-                    );
-                }
+                eprintln!(
+                    "TimeoutIterator:: Error occurred reading from source: {}.",
+                    e
+                );
                 None
             }
         }

@@ -1,6 +1,6 @@
 [package]
 name = "timeout-iterator"
-version = "0.3.0"
+version = "0.4.0"
 authors = ["Archis Gore <archis@polyverse.io>"]
 edition = "2018"
 license-file = "LICENSE"
@@ -10,9 +10,9 @@ readme = "README.md"
 repository = "https://github.com/polyverse/timeout-iterator"
 travis-ci = { repository = "polyverse/timeout_iterator", branch = "master" }
 
-description = """TimeoutIterator is a wrapper over any iterator that adds peek_timeout and next_timeout functions. 
-The canonical use-case is parsing multi-line free-form records (such as tailing a log fime) where it is desirable to 
-consume the very last line, and peek whether the record continues on the next time, but not block 
+description = """TimeoutIterator is a wrapper over any iterator that adds peek_timeout and next_timeout functions.
+The canonical use-case is parsing multi-line free-form records (such as tailing a log fime) where it is desirable to
+consume the very last line, and peek whether the record continues on the next time, but not block
 indefinitely on the peek."""
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
