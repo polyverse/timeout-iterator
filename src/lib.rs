@@ -52,9 +52,7 @@ where
     /**
      * Use this constructor
      */
-    pub fn from_result_iterator<R, E>(
-        reader: R,
-    ) -> Result<TimeoutIterator<T>, TimeoutIteratorError>
+    pub fn from_result_iterator<R, E>(reader: R) -> Result<TimeoutIterator<T>, TimeoutIteratorError>
     where
         R: Iterator<Item = result::Result<T, E>> + Send + 'static,
         E: fmt::Display + fmt::Debug,
@@ -82,9 +80,7 @@ where
         })
     }
 
-    pub fn from_item_iterator<R>(
-        reader: R,
-    ) -> Result<TimeoutIterator<T>, TimeoutIteratorError>
+    pub fn from_item_iterator<R>(reader: R) -> Result<TimeoutIterator<T>, TimeoutIteratorError>
     where
         R: Iterator<Item = T> + Send + 'static,
     {
@@ -184,7 +180,7 @@ mod tests {
         let lines_iterator =
             (Box::new(realistic_message.as_bytes()) as Box<dyn BufRead + Send>).lines();
 
-        let mut ti = TimeoutIterator::from_result_iterator(lines_iterator, 0).unwrap();
+        let mut ti = TimeoutIterator::from_result_iterator(lines_iterator).unwrap();
 
         assert_eq!(ti.next().unwrap(), "1");
         assert_eq!(ti.next().unwrap(), "2");
@@ -203,7 +199,7 @@ mod tests {
         let lines_iterator =
             (Box::new(realistic_message.as_bytes()) as Box<dyn BufRead + Send>).lines();
 
-        let mut ti = TimeoutIterator::from_result_iterator(lines_iterator, 0).unwrap();
+        let mut ti = TimeoutIterator::from_result_iterator(lines_iterator).unwrap();
 
         assert_eq!(ti.next().unwrap(), "1");
         assert_eq!(ti.next().unwrap(), "2");
@@ -224,7 +220,7 @@ mod tests {
 5";
         let lines_iterator =
             (Box::new(realistic_message.as_bytes()) as Box<dyn BufRead + Send>).lines();
-        let mut ti = TimeoutIterator::from_result_iterator(lines_iterator, 0).unwrap();
+        let mut ti = TimeoutIterator::from_result_iterator(lines_iterator).unwrap();
 
         assert_eq!(ti.next().unwrap(), "1");
         assert_eq!(ti.next().unwrap(), "2");
@@ -248,7 +244,7 @@ mod tests {
 5";
         let lines_iterator =
             (Box::new(realistic_message.as_bytes()) as Box<dyn BufRead + Send>).lines();
-        let mut ti = TimeoutIterator::from_result_iterator(lines_iterator, 0).unwrap();
+        let mut ti = TimeoutIterator::from_result_iterator(lines_iterator).unwrap();
 
         assert_eq!(ti.next().unwrap(), "1");
         assert_eq!(ti.next().unwrap(), "2");
@@ -266,7 +262,7 @@ mod tests {
     #[test]
     fn item_iterator() {
         let numbers: Vec<u32> = vec![1, 2, 3, 4, 5];
-        let mut ti = TimeoutIterator::from_item_iterator(numbers.into_iter(), 0).unwrap();
+        let mut ti = TimeoutIterator::from_item_iterator(numbers.into_iter()).unwrap();
 
         assert_eq!(ti.next().unwrap(), 1);
         assert_eq!(ti.next().unwrap(), 2);
@@ -284,7 +280,7 @@ mod tests {
     #[test]
     fn is_sendable() {
         let numbers: Vec<u32> = vec![1, 2, 3, 4, 5];
-        let mut ti = TimeoutIterator::from_item_iterator(numbers.into_iter(), 0).unwrap();
+        let mut ti = TimeoutIterator::from_item_iterator(numbers.into_iter()).unwrap();
         thread::spawn(move || {
             ti.next();
         });

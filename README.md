@@ -33,7 +33,7 @@ The item iterator is obvious and intuitive:
 use timeout_iterator::TimeoutIterator;
 
 let numbers: Vec<u32> = vec![1, 2, 3, 4, 5];
-let mut ti = TimeoutIterator::from_item_iterator(numbers.into_iter(), 0).unwrap();
+let mut ti = TimeoutIterator::from_item_iterator(numbers.into_iter()).unwrap();
 ```
 
 This will iterate over all the integers in the Vector.
@@ -75,7 +75,7 @@ SUBSYSTEM=pci
 DEVICE=+pci:0000:00:05.0";
 
 let mut lines_iterator = (Box::new(logmessage.as_bytes()) as Box<dyn BufRead + Send>).lines();
-let mut ti = TimeoutIterator::from_item_iterator(lines_iterator, 0).unwrap();
+let mut ti = TimeoutIterator::from_item_iterator(lines_iterator).unwrap();
 let result = ti.next_timeout(Duration::from_secs(1))
     .ok() // open the timeout iterator result
     .unwrap() // open the timeout iterator option
@@ -97,7 +97,7 @@ SUBSYSTEM=pci
 DEVICE=+pci:0000:00:05.0";
 
 let mut lines_iterator = (Box::new(logmessage.as_bytes()) as Box<dyn BufRead + Send>).lines();
-let mut ti = TimeoutIterator::from_result_iterator(lines_iterator, 0).unwrap();
+let mut ti = TimeoutIterator::from_result_iterator(lines_iterator).unwrap();
 
 let result = ti.next()
     .unwrap(); // single unwrap of Option
@@ -134,7 +134,7 @@ r"6,361,518496,-;ahci 0000:00:05.0: AHCI 0001.0300 32 slots 6 ports 6 Gbps 0x1 i
   DEVICE=+pci:0000:00:05.0";
 
 let mut lines_iterator = (Box::new(logmessage.as_bytes()) as Box<dyn BufRead + Send>).lines();
-let mut ti = TimeoutIterator::from_result_iterator(lines_iterator, 0).unwrap();
+let mut ti = TimeoutIterator::from_result_iterator(lines_iterator).unwrap();
 
 let mut records: Vec<String> = vec![];
 

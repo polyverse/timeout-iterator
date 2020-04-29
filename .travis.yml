@@ -1,3 +1,8 @@
 language: rust
 rust:
   - stable
+deploy:
+  provider: cargo
+  token: "$CARGO_TOKEN"
+  on:
+    tags: true
