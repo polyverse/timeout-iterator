@@ -105,7 +105,6 @@ let result = ti.next()
 assert_eq!(result, "6,361,518496,-;ahci 0000:00:05.0: AHCI 0001.0300 32 slots 6 ports 6 Gbps 0x1 impl SATA mode");
 ```
 
-
 # Effectively using Timeouts
 
 Now let's look at two log "Records", split over five lines:
