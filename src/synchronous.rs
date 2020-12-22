@@ -13,7 +13,7 @@ impl<T> TimeoutIterator<T>
 where
     T: Send + 'static,
 {
-    pub fn with_iter<R>(iter: R) -> Result<TimeoutIterator<T>, error::TimeoutIteratorError>
+    pub fn with_iter<R>(iter: R) -> Result<TimeoutIterator<T>, error::Error>
     where
         R: Iterator<Item = T> + Send + 'static,
     {
@@ -34,7 +34,7 @@ where
         })
     }
 
-    pub fn next_timeout(&mut self, timeout: Duration) -> Result<T, error::TimeoutIteratorError> {
+    pub fn next_timeout(&mut self, timeout: Duration) -> Result<T, error::Error> {
         if !self.buffer.is_empty() {
             return Ok(self.buffer.remove(0));
         };
@@ -42,25 +42,19 @@ where
         match self.source.recv_timeout(timeout) {
             Ok(item) => Ok(item),
             Err(e) => match e {
-                mpsc::RecvTimeoutError::Timeout => Err(error::TimeoutIteratorError::TimedOut),
-                mpsc::RecvTimeoutError::Disconnected => {
-                    Err(error::TimeoutIteratorError::Disconnected)
-                }
+                mpsc::RecvTimeoutError::Timeout => Err(error::Error::TimedOut),
+                mpsc::RecvTimeoutError::Disconnected => Err(error::Error::Disconnected),
             },
         }
     }
 
-    pub fn peek_timeout(&mut self, timeout: Duration) -> Result<&T, error::TimeoutIteratorError> {
+    pub fn peek_timeout(&mut self, timeout: Duration) -> Result<&T, error::Error> {
         if self.buffer.is_empty() {
             match self.source.recv_timeout(timeout) {
                 Ok(item) => self.buffer.push(item),
                 Err(e) => match e {
-                    mpsc::RecvTimeoutError::Timeout => {
-                        return Err(error::TimeoutIteratorError::TimedOut)
-                    }
-                    mpsc::RecvTimeoutError::Disconnected => {
-                        return Err(error::TimeoutIteratorError::Disconnected)
-                    }
+                    mpsc::RecvTimeoutError::Timeout => return Err(error::Error::TimedOut),
+                    mpsc::RecvTimeoutError::Disconnected => return Err(error::Error::Disconnected),
                 },
             }
         };
