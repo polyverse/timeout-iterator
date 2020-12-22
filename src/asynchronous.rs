@@ -231,20 +231,11 @@ mod tests {
 
             assert_eq!(ti.next().await.unwrap(), 1);
             assert_eq!(ti.next().await.unwrap(), 2);
-            assert_eq!(
-                *ti.peek_timeout(Duration::from_secs(1)).await.unwrap(),
-                3
-            );
+            assert_eq!(*ti.peek_timeout(Duration::from_secs(1)).await.unwrap(), 3);
             assert_eq!(ti.next().await.unwrap(), 3);
             assert_eq!(ti.next().await.unwrap(), 4);
-            assert_eq!(
-                *ti.peek_timeout(Duration::from_secs(1)).await.unwrap(),
-                5
-            );
-            assert_eq!(
-                *ti.peek_timeout(Duration::from_secs(1)).await.unwrap(),
-                5
-            );
+            assert_eq!(*ti.peek_timeout(Duration::from_secs(1)).await.unwrap(), 5);
+            assert_eq!(*ti.peek_timeout(Duration::from_secs(1)).await.unwrap(), 5);
             assert_eq!(ti.next().await.unwrap(), 5);
 
             let timeout_result = ti.next_timeout(Duration::from_secs(1)).await;
