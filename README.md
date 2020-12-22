@@ -73,7 +73,7 @@ There is a similar `peek_timeout` function to peek the next entry (or timeout do
 can see if anything is coming down the line without consuming it.
 
 
-## Synchronous Iteration
+## Asynchronous Iteration
 
 When feature `async` is used.
 
