@@ -14,7 +14,15 @@ The canonical use-case is parsing multi-line free-form records (such as tailing 
 consume the very last line, and peek whether the record continues on the next time, but not block
 indefinitely on the peek."""
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[features]
+# The default set of optional packages. Most people will want to use these
+# packages, but they are strictly optional. Note that `session` is not a package
+# but rather another feature listed in this manifest.
+async = ["futures", "futures-util", "tokio"]
 
 [dependencies]
-doc-comment = "0.3.1"
+# Optional - only enabled through the "async" feature
+futures = { version = "0.3.8", optional = true }
+futures-util = { version = "0.3.8", optional = true }
+tokio = { version = "0.3.6", features = ["rt-multi-thread", "macros", "time", "fs", "io-util", "stream"], optional = true }
+
