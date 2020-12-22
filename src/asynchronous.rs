@@ -1,4 +1,6 @@
+use core::pin::Pin;
 use futures::stream::Stream;
+use futures::task::{Context, Poll};
 use futures::StreamExt;
 use std::time::Duration;
 use tokio::time::timeout;
@@ -7,6 +9,7 @@ use crate::error::Error;
 
 pub struct TimeoutStream<T, R>
 where
+    T: Unpin,
     R: Stream<Item = T> + Unpin,
 {
     source: R,
@@ -15,6 +18,7 @@ where
 
 impl<T, R> TimeoutStream<T, R>
 where
+    T: Unpin,
     R: Stream<Item = T> + Unpin,
 {
     /**
@@ -45,20 +49,32 @@ where
         }
     }
 
-    pub async fn next(&mut self) -> Option<T> {
-        self.peek().await?;
-
-        Some(self.buffer.remove(0))
-    }
-
     pub async fn peek(&mut self) -> Option<&T> {
         if self.buffer.is_empty() {
-            match self.source.next().await {
+            match self.next().await {
                 Some(item) => self.buffer.push(item),
                 None => return None,
             }
         }
         self.buffer.first()
+    }
+}
+
+impl<T, R> Stream for TimeoutStream<T, R>
+where
+    T: Unpin,
+    R: Stream<Item = T> + Unpin,
+{
+    type Item = T;
+    fn poll_next(
+        mut self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+    ) -> Poll<Option<<Self as Stream>::Item>> {
+        if !self.buffer.is_empty() {
+            return Poll::Ready(Some(self.buffer.remove(0)));
+        }
+
+        Pin::new(&mut self.as_mut().source).poll_next(cx)
     }
 }
 

@@ -1,6 +1,6 @@
 pub mod error;
 
-#[cfg(test)]
+#[cfg(all(test, feature = "async"))]
 #[macro_use]
 extern crate assert_matches;
 
