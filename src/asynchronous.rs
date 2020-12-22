@@ -148,7 +148,6 @@ mod tests {
             assert_eq!(
                 ti.peek_timeout(Duration::from_secs(1))
                     .await
-                    .ok()
                     .unwrap()
                     .as_ref()
                     .unwrap(),
@@ -159,7 +158,6 @@ mod tests {
             assert_eq!(
                 ti.peek_timeout(Duration::from_secs(1))
                     .await
-                    .ok()
                     .unwrap()
                     .as_ref()
                     .unwrap(),
@@ -168,7 +166,6 @@ mod tests {
             assert_eq!(
                 ti.peek_timeout(Duration::from_secs(1))
                     .await
-                    .ok()
                     .unwrap()
                     .as_ref()
                     .unwrap(),
@@ -235,17 +232,17 @@ mod tests {
             assert_eq!(ti.next().await.unwrap(), 1);
             assert_eq!(ti.next().await.unwrap(), 2);
             assert_eq!(
-                *ti.peek_timeout(Duration::from_secs(1)).await.ok().unwrap(),
+                *ti.peek_timeout(Duration::from_secs(1)).await.unwrap(),
                 3
             );
             assert_eq!(ti.next().await.unwrap(), 3);
             assert_eq!(ti.next().await.unwrap(), 4);
             assert_eq!(
-                *ti.peek_timeout(Duration::from_secs(1)).await.ok().unwrap(),
+                *ti.peek_timeout(Duration::from_secs(1)).await.unwrap(),
                 5
             );
             assert_eq!(
-                *ti.peek_timeout(Duration::from_secs(1)).await.ok().unwrap(),
+                *ti.peek_timeout(Duration::from_secs(1)).await.unwrap(),
                 5
             );
             assert_eq!(ti.next().await.unwrap(), 5);
@@ -275,11 +272,12 @@ mod tests {
             );
             assert_eq!(ti.next().await.unwrap(), 2);
             assert_matches!(
-                ti.next_timeout(Duration::from_millis(500))
+                ti.peek_timeout(Duration::from_millis(500))
                     .await
                     .unwrap_err(),
                 Error::TimedOut
             );
+            assert_eq!(*ti.peek().await.unwrap(), 3);
             assert_eq!(ti.next().await.unwrap(), 3);
             assert_matches!(
                 ti.next_timeout(Duration::from_millis(500))

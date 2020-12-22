@@ -71,3 +71,76 @@ loop {
 
 There is a similar `peek_timeout` function to peek the next entry (or timeout doing so), so you
 can see if anything is coming down the line without consuming it.
+
+
+## Synchronous Iteration
+
+When feature `async` is used.
+
+The stream wrapper is intuitive:
+
+```.rust
+    let numbers: Vec<u32> = vec![1, 2, 3, 4, 5];
+    let numbers_stream = iter(numbers.into_iter());
+
+    let mut ti = TimeoutStream::with_stream(numbers_stream).await?;
+```
+
+You can use it like any other Stream:
+
+```.rust
+            assert_eq!(ti.next().await?, 1);
+            assert_eq!(ti.next().await?, 2);
+            assert_eq!(ti.next().await?, 3);
+            assert_eq!(ti.next().await?, 4);
+            assert_eq!(ti.next().await?, 5);
+```
+
+You can peek the next value without consuming it:
+
+```.rust
+    // Can peek many times
+    assert_eq!(ti.peek().await.unwrap(), 1);
+    assert_eq!(ti.peek().await.unwrap(), 1);
+    assert_eq!(ti.peek().await.unwrap(), 1);
+    assert_eq!(ti.peek().await.unwrap(), 1);
+
+    // And then consume with 'next`
+    assert_eq!(ti.next().await.unwrap(), 3);
+```
+
+You can peek or consume with a timeout and catch the Error::TimedOut error:
+
+```.rust
+
+    let numbers: Vec<u32> = vec![1, 2, 3, 4, 5];
+
+    // Slow down the numbers to stream
+    let throttled_numbers = iter(numbers.into_iter())
+        .throttle(Duration::from_secs(1));
+
+    let mut ti = TimeoutStream::with_stream(throttled_numbers).await.unwrap();
+
+    // First number is always available
+    assert_eq!(ti.next().await.unwrap(), 1);
+
+    // 2nd number will timeout at half a second in
+    assert_matches!(ti.next_timeout(Duration::from_millis(500)).await.unwrap_err(), Error::TimedOut);
+
+    // Will consume it if called blocking
+    assert_eq!(ti.next().await.unwrap(), 2);
+
+    // Peek with timeout will... timeout
+    assert_matches!(ti.peek_timeout(Duration::from_millis(500)).await.unwrap_err(), Error::TimedOut);
+
+    // a blocking peek will eventually succeed
+    // we dereference the peek because it's a reference (not move)
+    assert_eq!(*ti.peek().await.unwrap(), 3);
+
+    // The number will be consumed
+    assert_eq!(ti.next().await.unwrap(), 3);
+
+    // As proven by the next number
+    assert_eq!(ti.next().await.unwrap(), 4);
+```
+
