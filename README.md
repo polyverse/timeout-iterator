@@ -1,4 +1,4 @@
-![Build Status](https://github.com/polyverse/timeout-iterator/workflows/Rust/badge.svg?branch=main)
+![Build Status](https://github.com/polyverse/timeout-iterator/workflows/Build%20Status/badge.svg)
 
 # timeout-iterator
 
