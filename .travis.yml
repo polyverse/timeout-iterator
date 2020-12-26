@@ -1,11 +1,11 @@
 services:
   - docker
 before_install:
-  - docker pull polyverse/rust-dev-env
+  - docker pull ghcr.io/polyverse/rust-dev-env/rust-dev-env:latest
 script:
-  - docker run -v cargo-cache:/root/.cargo/registry -v $PWD:/volume --rm -t docker.pkg.github.com/polyverse/rust-dev-env/rust-dev-env:latest cargo clippy --all-targets
-  - docker run -v cargo-cache:/root/.cargo/registry -v $PWD:/volume --rm -t docker.pkg.github.com/polyverse/rust-dev-env/rust-dev-env:latest cargo clippy --all-targets --features="async"
+  - docker run -v cargo-cache:/root/.cargo/registry -v $PWD:/volume --rm -t ghcr.io/polyverse/rust-dev-env/rust-dev-env:latest cargo clippy --all-targets
+  - docker run -v cargo-cache:/root/.cargo/registry -v $PWD:/volume --rm -t ghcr.io/polyverse/rust-dev-env/rust-dev-env:latest cargo clippy --all-targets --features="async"
 
   # Test with cartesian product of features: async on/off and ptr on/off
-  - docker run -v cargo-cache:/root/.cargo/registry -v $PWD:/volume --rm -t docker.pkg.github.com/polyverse/rust-dev-env/rust-dev-env:latest cargo test --all-targets
-  - docker run -v cargo-cache:/root/.cargo/registry -v $PWD:/volume --rm -t docker.pkg.github.com/polyverse/rust-dev-env/rust-dev-env:latest cargo test --all-targets --features="async"
+  - docker run -v cargo-cache:/root/.cargo/registry -v $PWD:/volume --rm -t ghcr.io/polyverse/rust-dev-env/rust-dev-env:latest cargo test --all-targets
+  - docker run -v cargo-cache:/root/.cargo/registry -v $PWD:/volume --rm -t ghcr.io/polyverse/rust-dev-env/rust-dev-env:latest cargo test --all-targets --features="async"
