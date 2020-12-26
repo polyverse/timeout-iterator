@@ -7,9 +7,6 @@ on:
   # Build for any PRs.
   pull_request:
 
-env:
-  BASE_COMMAND: rust-dev-envdocker run -v cargo-cache:/root/.cargo/registry -v $PWD:/volume --rm -t ghcr.io/polyverse/rust-dev-env/rust-dev-env:latest
-
 jobs:
   # Push image to GitHub Packages. No "testing" because this is a heavy image
   # See also https://docs.docker.com/docker-hub/builds/
