@@ -1,9 +1,9 @@
 use core::pin::Pin;
 use futures::stream::Stream;
 use futures::task::{Context, Poll};
-use futures::StreamExt;
 use std::time::Duration;
 use tokio::time::timeout;
+use tokio_stream::StreamExt;
 
 use crate::error::Error;
 
@@ -83,7 +83,6 @@ mod tests {
     use super::*;
     use futures::stream::iter;
     use std::io::BufRead;
-    use tokio::stream::StreamExt;
 
     #[test]
     fn iterates() {
@@ -248,9 +247,11 @@ mod tests {
         tokio_test::block_on(async {
             let numbers: Vec<u32> = vec![1, 2, 3, 4, 5];
 
-            let throttled_numbers = iter(numbers.into_iter())
-                // item every second at most
-                .throttle(Duration::from_secs(1));
+            let throttled_numbers = Box::pin(
+                iter(numbers.into_iter())
+                    // item every second at most
+                    .throttle(Duration::from_secs(1)),
+            );
 
             let mut ti = TimeoutStream::with_stream(throttled_numbers).await.unwrap();
 

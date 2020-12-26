@@ -18,13 +18,14 @@ indefinitely on the peek."""
 # The default set of optional packages. Most people will want to use these
 # packages, but they are strictly optional. Note that `session` is not a package
 # but rather another feature listed in this manifest.
-async = ["futures", "futures-util", "tokio"]
+async = ["futures", "futures-util", "tokio", "tokio-stream"]
 
 [dependencies]
 # Optional - only enabled through the "async" feature
 futures = { version = "0.3.8", optional = true }
 futures-util = { version = "0.3.8", optional = true }
-tokio = { version = "1.0.1", features = ["rt-multi-thread", "macros", "time", "io-util", "stream", "sync"], optional = true }
+tokio = { version = "1.0.1", features = ["time"], optional = true }
+tokio-stream = { version = "0.1.0", optional = true }
 
 [dev-dependencies]
 tokio-test = "0.4.0"
