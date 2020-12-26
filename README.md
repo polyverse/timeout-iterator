@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.org/polyverse/timeout-iterator.svg?branch=master)](https://travis-ci.org/polyverse/timeout-iterator)
+![Build Status](https://github.com/polyverse/timeout-iterator/workflows/Rust/badge.svg?branch=main)
 
 # timeout-iterator
 

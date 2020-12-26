@@ -1,16 +1,10 @@
-name: Build Validation
+name: Build Status
 
 on:
+  # Build on all pushes
   push:
-    # Publish `main` as Docker `latest` image.
-    branches:
-      - main
 
-    # Publish `v1.2.3` tags as releases.
-    tags:
-      - v*
-
-  # Run tests for any PRs.
+  # Build for any PRs.
   pull_request:
 
 env:
@@ -19,7 +13,7 @@ env:
 jobs:
   # Push image to GitHub Packages. No "testing" because this is a heavy image
   # See also https://docs.docker.com/docker-hub/builds/
-  push:
+  build:
     runs-on: ubuntu-latest
     if: github.event_name == 'push'
 
