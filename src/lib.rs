@@ -4,7 +4,7 @@ pub mod error;
 #[macro_use]
 extern crate assert_matches;
 
-#[cfg(not(feature = "async"))]
+#[cfg(feature = "sync")]
 pub mod synchronous;
 
 #[cfg(feature = "async")]

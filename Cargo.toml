@@ -15,10 +15,12 @@ consume the very last line, and peek whether the record continues on the next ti
 indefinitely on the peek."""
 
 [features]
+default = ["async"]
 # The default set of optional packages. Most people will want to use these
 # packages, but they are strictly optional. Note that `session` is not a package
 # but rather another feature listed in this manifest.
 async = ["futures", "futures-util", "tokio", "tokio-stream"]
+sync = []
 
 [dependencies]
 # Optional - only enabled through the "async" feature
