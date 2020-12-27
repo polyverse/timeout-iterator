@@ -236,9 +236,5 @@ mod tests {
         thread::spawn(move || {
             ti.next();
         });
-        assert!(
-            true,
-            "If this compiles, TimeoutIterator is Send'able across threads."
-        );
     }
 }
