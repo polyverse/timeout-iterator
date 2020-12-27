@@ -11,11 +11,13 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      - name: Test
-        run: docker run -v cargo-cache:/root/.cargo/registry -v $PWD:/volume --rm -t ghcr.io/polyverse/rust-dev-env/rust-dev-env:latest cargo test --workspace --all-targets --all-features
+      - name: Style (rustfmt)
+        run: docker run -v cargo-cache:/root/.cargo/registry -v $PWD:/volume --rm -t ghcr.io/polyverse/rust-dev-env/rust-dev-env:latest cargo fmt --all -- --check
 
       - name: Lint (Clippy)
         run: docker run -v cargo-cache:/root/.cargo/registry -v $PWD:/volume --rm -t ghcr.io/polyverse/rust-dev-env/rust-dev-env:latest cargo clippy --workspace --all-targets --all-features
 
-      - name: Style (rustfmt)
-        run: docker run -v cargo-cache:/root/.cargo/registry -v $PWD:/volume --rm -t ghcr.io/polyverse/rust-dev-env/rust-dev-env:latest cargo fmt --workspace --all-targets --all-features -- --check
+      - name: Test
+        run: docker run -v cargo-cache:/root/.cargo/registry -v $PWD:/volume --rm -t ghcr.io/polyverse/rust-dev-env/rust-dev-env:latest cargo test --workspace --all-targets --all-features
+
+
