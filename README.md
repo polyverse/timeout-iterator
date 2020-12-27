@@ -23,7 +23,7 @@ This is where an iterator with a timeout capability helps to break the deadlock.
 
 ## Synchronous Iteration
 
-When feature `async` is not used.
+When feature `sync` is used.
 
 The iterator is obvious and intuitive:
 
