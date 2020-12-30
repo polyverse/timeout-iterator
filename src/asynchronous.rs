@@ -84,240 +84,228 @@ mod tests {
     use futures::stream::iter;
     use std::io::BufRead;
 
-    #[test]
-    fn iterates() {
-        tokio_test::block_on(async {
-            let realistic_message = r"1
+    #[tokio::test]
+    async fn iterates() {
+        let realistic_message = r"1
 2
 3
 4
 5";
-            let lines_iterator =
-                iter((Box::new(realistic_message.as_bytes()) as Box<dyn BufRead>).lines());
+        let lines_iterator =
+            iter((Box::new(realistic_message.as_bytes()) as Box<dyn BufRead>).lines());
 
-            let mut ti = TimeoutStream::with_stream(lines_iterator).await.unwrap();
+        let mut ti = TimeoutStream::with_stream(lines_iterator).await.unwrap();
 
-            assert_eq!(ti.next().await.unwrap().unwrap(), "1");
-            assert_eq!(ti.next().await.unwrap().unwrap(), "2");
-            assert_eq!(ti.next().await.unwrap().unwrap(), "3");
-            assert_eq!(ti.next().await.unwrap().unwrap(), "4");
-            assert_eq!(ti.next().await.unwrap().unwrap(), "5");
-        })
+        assert_eq!(ti.next().await.unwrap().unwrap(), "1");
+        assert_eq!(ti.next().await.unwrap().unwrap(), "2");
+        assert_eq!(ti.next().await.unwrap().unwrap(), "3");
+        assert_eq!(ti.next().await.unwrap().unwrap(), "4");
+        assert_eq!(ti.next().await.unwrap().unwrap(), "5");
     }
 
-    #[test]
-    fn next_timeout() {
-        tokio_test::block_on(async {
-            let realistic_message = r"1
+    #[tokio::test]
+    async fn next_timeout() {
+        let realistic_message = r"1
 2
 3
 4
 5";
-            let lines_iterator =
-                iter((Box::new(realistic_message.as_bytes()) as Box<dyn BufRead>).lines());
+        let lines_iterator =
+            iter((Box::new(realistic_message.as_bytes()) as Box<dyn BufRead>).lines());
 
-            let mut ti = TimeoutStream::with_stream(lines_iterator).await.unwrap();
+        let mut ti = TimeoutStream::with_stream(lines_iterator).await.unwrap();
 
-            assert_eq!(ti.next().await.unwrap().unwrap(), "1");
-            assert_eq!(ti.next().await.unwrap().unwrap(), "2");
-            assert_eq!(ti.next().await.unwrap().unwrap(), "3");
-            assert_eq!(ti.next().await.unwrap().unwrap(), "4");
-            assert_eq!(ti.next().await.unwrap().unwrap(), "5");
+        assert_eq!(ti.next().await.unwrap().unwrap(), "1");
+        assert_eq!(ti.next().await.unwrap().unwrap(), "2");
+        assert_eq!(ti.next().await.unwrap().unwrap(), "3");
+        assert_eq!(ti.next().await.unwrap().unwrap(), "4");
+        assert_eq!(ti.next().await.unwrap().unwrap(), "5");
 
-            let timeout_result = ti.next_timeout(Duration::from_secs(1)).await;
-            assert!(timeout_result.is_err());
-        })
+        let timeout_result = ti.next_timeout(Duration::from_secs(1)).await;
+        assert!(timeout_result.is_err());
     }
 
-    #[test]
-    fn peek_timeout_doesnt_remove() {
-        tokio_test::block_on(async {
-            let realistic_message = r"1
+    #[tokio::test]
+    async fn peek_timeout_doesnt_remove() {
+        let realistic_message = r"1
 2
 3
 4
 5";
-            let lines_iterator =
-                iter((Box::new(realistic_message.as_bytes()) as Box<dyn BufRead>).lines());
+        let lines_iterator =
+            iter((Box::new(realistic_message.as_bytes()) as Box<dyn BufRead>).lines());
 
-            let mut ti = TimeoutStream::with_stream(lines_iterator).await.unwrap();
+        let mut ti = TimeoutStream::with_stream(lines_iterator).await.unwrap();
 
-            assert_eq!(ti.next().await.unwrap().unwrap(), "1");
-            assert_eq!(ti.next().await.unwrap().unwrap(), "2");
-            assert_eq!(
-                ti.peek_timeout(Duration::from_secs(1))
-                    .await
-                    .unwrap()
-                    .as_ref()
-                    .unwrap(),
-                "3"
-            );
-            assert_eq!(ti.next().await.unwrap().unwrap(), "3");
-            assert_eq!(ti.next().await.unwrap().unwrap(), "4");
-            assert_eq!(
-                ti.peek_timeout(Duration::from_secs(1))
-                    .await
-                    .unwrap()
-                    .as_ref()
-                    .unwrap(),
-                "5"
-            );
-            assert_eq!(
-                ti.peek_timeout(Duration::from_secs(1))
-                    .await
-                    .unwrap()
-                    .as_ref()
-                    .unwrap(),
-                "5"
-            );
-            assert_eq!(ti.next().await.unwrap().unwrap(), "5");
-
-            let timeout_result = ti.next_timeout(Duration::from_secs(1)).await;
-            assert!(timeout_result.is_err());
-        })
-    }
-
-    #[test]
-    fn peek_doesnt_remove() {
-        tokio_test::block_on(async {
-            let realistic_message = r"1
-2
-3
-4
-5";
-            let lines_iterator =
-                iter((Box::new(realistic_message.as_bytes()) as Box<dyn BufRead>).lines());
-
-            let mut ti = TimeoutStream::with_stream(lines_iterator).await.unwrap();
-
-            assert_eq!(ti.next().await.unwrap().unwrap(), "1");
-            assert_eq!(ti.next().await.unwrap().unwrap(), "2");
-            assert_eq!(ti.peek().await.unwrap().as_ref().unwrap(), "3");
-            assert_eq!(
-                ti.peek_timeout(Duration::from_secs(1))
-                    .await
-                    .unwrap()
-                    .as_ref()
-                    .unwrap(),
-                "3"
-            );
-            assert_eq!(ti.next().await.unwrap().unwrap(), "3");
-            assert_eq!(ti.next().await.unwrap().unwrap(), "4");
-            assert_eq!(
-                ti.peek_timeout(Duration::from_secs(1))
-                    .await
-                    .unwrap()
-                    .as_ref()
-                    .unwrap(),
-                "5"
-            );
-            assert_eq!(ti.peek().await.unwrap().as_ref().unwrap(), "5");
-            assert_eq!(ti.next().await.unwrap().unwrap(), "5");
-
-            let timeout_result = ti.next_timeout(Duration::from_secs(1)).await;
-            assert!(timeout_result.is_err());
-        })
-    }
-
-    #[test]
-    fn item_iterator() {
-        tokio_test::block_on(async {
-            let numbers: Vec<u32> = vec![1, 2, 3, 4, 5];
-
-            let mut ti = TimeoutStream::with_stream(iter(numbers.into_iter()))
+        assert_eq!(ti.next().await.unwrap().unwrap(), "1");
+        assert_eq!(ti.next().await.unwrap().unwrap(), "2");
+        assert_eq!(
+            ti.peek_timeout(Duration::from_secs(1))
                 .await
-                .unwrap();
+                .unwrap()
+                .as_ref()
+                .unwrap(),
+            "3"
+        );
+        assert_eq!(ti.next().await.unwrap().unwrap(), "3");
+        assert_eq!(ti.next().await.unwrap().unwrap(), "4");
+        assert_eq!(
+            ti.peek_timeout(Duration::from_secs(1))
+                .await
+                .unwrap()
+                .as_ref()
+                .unwrap(),
+            "5"
+        );
+        assert_eq!(
+            ti.peek_timeout(Duration::from_secs(1))
+                .await
+                .unwrap()
+                .as_ref()
+                .unwrap(),
+            "5"
+        );
+        assert_eq!(ti.next().await.unwrap().unwrap(), "5");
 
-            assert_eq!(ti.next().await.unwrap(), 1);
-            assert_eq!(ti.next().await.unwrap(), 2);
-            assert_eq!(*ti.peek_timeout(Duration::from_secs(1)).await.unwrap(), 3);
-            assert_eq!(ti.next().await.unwrap(), 3);
-            assert_eq!(ti.next().await.unwrap(), 4);
-            assert_eq!(*ti.peek_timeout(Duration::from_secs(1)).await.unwrap(), 5);
-            assert_eq!(*ti.peek_timeout(Duration::from_secs(1)).await.unwrap(), 5);
-            assert_eq!(ti.next().await.unwrap(), 5);
-
-            let timeout_result = ti.next_timeout(Duration::from_secs(1)).await;
-            assert!(timeout_result.is_err());
-        })
+        let timeout_result = ti.next_timeout(Duration::from_secs(1)).await;
+        assert!(timeout_result.is_err());
     }
 
-    #[test]
-    fn timedout_future_doesnt_drop_item() {
-        tokio_test::block_on(async {
-            let numbers: Vec<u32> = vec![1, 2, 3, 4, 5];
+    #[tokio::test]
+    async fn peek_doesnt_remove() {
+        let realistic_message = r"1
+2
+3
+4
+5";
+        let lines_iterator =
+            iter((Box::new(realistic_message.as_bytes()) as Box<dyn BufRead>).lines());
 
-            let throttled_numbers = Box::pin(
-                iter(numbers.into_iter())
-                    // item every second at most
-                    .throttle(Duration::from_secs(1)),
-            );
+        let mut ti = TimeoutStream::with_stream(lines_iterator).await.unwrap();
 
-            let mut ti = TimeoutStream::with_stream(throttled_numbers).await.unwrap();
+        assert_eq!(ti.next().await.unwrap().unwrap(), "1");
+        assert_eq!(ti.next().await.unwrap().unwrap(), "2");
+        assert_eq!(ti.peek().await.unwrap().as_ref().unwrap(), "3");
+        assert_eq!(
+            ti.peek_timeout(Duration::from_secs(1))
+                .await
+                .unwrap()
+                .as_ref()
+                .unwrap(),
+            "3"
+        );
+        assert_eq!(ti.next().await.unwrap().unwrap(), "3");
+        assert_eq!(ti.next().await.unwrap().unwrap(), "4");
+        assert_eq!(
+            ti.peek_timeout(Duration::from_secs(1))
+                .await
+                .unwrap()
+                .as_ref()
+                .unwrap(),
+            "5"
+        );
+        assert_eq!(ti.peek().await.unwrap().as_ref().unwrap(), "5");
+        assert_eq!(ti.next().await.unwrap().unwrap(), "5");
 
-            assert_eq!(ti.next().await.unwrap(), 1);
-            assert_matches!(
-                ti.next_timeout(Duration::from_millis(500))
-                    .await
-                    .unwrap_err(),
-                Error::TimedOut
-            );
-            assert_eq!(ti.next().await.unwrap(), 2);
-            assert_matches!(
-                ti.peek_timeout(Duration::from_millis(500))
-                    .await
-                    .unwrap_err(),
-                Error::TimedOut
-            );
-            assert_eq!(*ti.peek().await.unwrap(), 3);
-            assert_eq!(ti.next().await.unwrap(), 3);
-            assert_matches!(
-                ti.next_timeout(Duration::from_millis(500))
-                    .await
-                    .unwrap_err(),
-                Error::TimedOut
-            );
-            assert_eq!(ti.next().await.unwrap(), 4);
-            assert_matches!(
-                ti.next_timeout(Duration::from_millis(100))
-                    .await
-                    .unwrap_err(),
-                Error::TimedOut
-            );
-            assert_matches!(
-                ti.next_timeout(Duration::from_millis(100))
-                    .await
-                    .unwrap_err(),
-                Error::TimedOut
-            );
-            assert_matches!(
-                ti.next_timeout(Duration::from_millis(100))
-                    .await
-                    .unwrap_err(),
-                Error::TimedOut
-            );
-            assert_matches!(
-                ti.next_timeout(Duration::from_millis(100))
-                    .await
-                    .unwrap_err(),
-                Error::TimedOut
-            );
-            assert_matches!(
-                ti.next_timeout(Duration::from_millis(100))
-                    .await
-                    .unwrap_err(),
-                Error::TimedOut
-            );
-            assert_matches!(
-                ti.next_timeout(Duration::from_millis(100))
-                    .await
-                    .unwrap_err(),
-                Error::TimedOut
-            );
-            assert_eq!(ti.next().await.unwrap(), 5);
+        let timeout_result = ti.next_timeout(Duration::from_secs(1)).await;
+        assert!(timeout_result.is_err());
+    }
 
-            let timeout_result = ti.next_timeout(Duration::from_secs(1)).await;
-            assert!(timeout_result.is_err());
-        })
+    #[tokio::test]
+    async fn item_iterator() {
+        let numbers: Vec<u32> = vec![1, 2, 3, 4, 5];
+
+        let mut ti = TimeoutStream::with_stream(iter(numbers.into_iter()))
+            .await
+            .unwrap();
+
+        assert_eq!(ti.next().await.unwrap(), 1);
+        assert_eq!(ti.next().await.unwrap(), 2);
+        assert_eq!(*ti.peek_timeout(Duration::from_secs(1)).await.unwrap(), 3);
+        assert_eq!(ti.next().await.unwrap(), 3);
+        assert_eq!(ti.next().await.unwrap(), 4);
+        assert_eq!(*ti.peek_timeout(Duration::from_secs(1)).await.unwrap(), 5);
+        assert_eq!(*ti.peek_timeout(Duration::from_secs(1)).await.unwrap(), 5);
+        assert_eq!(ti.next().await.unwrap(), 5);
+
+        let timeout_result = ti.next_timeout(Duration::from_secs(1)).await;
+        assert!(timeout_result.is_err());
+    }
+
+    #[tokio::test]
+    async fn timedout_future_doesnt_drop_item() {
+        let numbers: Vec<u32> = vec![1, 2, 3, 4, 5];
+
+        let throttled_numbers = Box::pin(
+            iter(numbers.into_iter())
+                // item every second at most
+                .throttle(Duration::from_secs(1)),
+        );
+
+        let mut ti = TimeoutStream::with_stream(throttled_numbers).await.unwrap();
+
+        assert_eq!(ti.next().await.unwrap(), 1);
+        assert_matches!(
+            ti.next_timeout(Duration::from_millis(500))
+                .await
+                .unwrap_err(),
+            Error::TimedOut
+        );
+        assert_eq!(ti.next().await.unwrap(), 2);
+        assert_matches!(
+            ti.peek_timeout(Duration::from_millis(500))
+                .await
+                .unwrap_err(),
+            Error::TimedOut
+        );
+        assert_eq!(*ti.peek().await.unwrap(), 3);
+        assert_eq!(ti.next().await.unwrap(), 3);
+        assert_matches!(
+            ti.next_timeout(Duration::from_millis(500))
+                .await
+                .unwrap_err(),
+            Error::TimedOut
+        );
+        assert_eq!(ti.next().await.unwrap(), 4);
+        assert_matches!(
+            ti.next_timeout(Duration::from_millis(100))
+                .await
+                .unwrap_err(),
+            Error::TimedOut
+        );
+        assert_matches!(
+            ti.next_timeout(Duration::from_millis(100))
+                .await
+                .unwrap_err(),
+            Error::TimedOut
+        );
+        assert_matches!(
+            ti.next_timeout(Duration::from_millis(100))
+                .await
+                .unwrap_err(),
+            Error::TimedOut
+        );
+        assert_matches!(
+            ti.next_timeout(Duration::from_millis(100))
+                .await
+                .unwrap_err(),
+            Error::TimedOut
+        );
+        assert_matches!(
+            ti.next_timeout(Duration::from_millis(100))
+                .await
+                .unwrap_err(),
+            Error::TimedOut
+        );
+        assert_matches!(
+            ti.next_timeout(Duration::from_millis(100))
+                .await
+                .unwrap_err(),
+            Error::TimedOut
+        );
+        assert_eq!(ti.next().await.unwrap(), 5);
+
+        let timeout_result = ti.next_timeout(Duration::from_secs(1)).await;
+        assert!(timeout_result.is_err());
     }
 }

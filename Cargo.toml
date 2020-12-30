@@ -30,5 +30,5 @@ tokio = { version = "1.0.1", features = ["time"], optional = true }
 tokio-stream = { version = "0.1.0", optional = true }
 
 [dev-dependencies]
-tokio-test = "0.4.0"
+tokio = { version = "1.0.1", features = ["time", "rt", "macros"]}
 assert_matches = "1.4.0"
