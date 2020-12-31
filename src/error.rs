@@ -3,7 +3,7 @@ use std::fmt::{Debug, Formatter, Result as FmtResult};
 
 #[derive(Debug)]
 pub enum Error {
-    #[cfg(feature="sync")]
+    #[cfg(feature = "sync")]
     ErrorSpawningThread(std::io::Error),
     TimedOut,
     Disconnected,
@@ -20,7 +20,7 @@ impl fmt::Display for Error {
                     "Timed out waiting on the underlying iterator for the next item".to_owned(),
                 Self::Disconnected => "Underlying iterator closed/disconnected".to_owned(),
 
-                #[cfg(feature="sync")]
+                #[cfg(feature = "sync")]
                 Self::ErrorSpawningThread(e) => format!(
                     "Error when spawing a thread for sinking events. Inner io::Error: {}",
                     e
@@ -30,7 +30,7 @@ impl fmt::Display for Error {
     }
 }
 
-#[cfg(feature="sync")]
+#[cfg(feature = "sync")]
 impl From<std::io::Error> for Error {
     fn from(err: std::io::Error) -> Self {
         Self::ErrorSpawningThread(err)
