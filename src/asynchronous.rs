@@ -81,9 +81,9 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+    use assert_matches::assert_matches;
     use futures::stream::iter;
     use std::io::BufRead;
-    use assert_matches::assert_matches;
 
     #[tokio::test]
     async fn iterates() {
