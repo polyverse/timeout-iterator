@@ -96,7 +96,7 @@ impl<T> Iterator for TimeoutIterator<T> {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "sync"))]
 mod tests {
     use super::*;
     use std::io::prelude::*;
@@ -108,8 +108,7 @@ mod tests {
 3
 4
 5";
-        let lines_iterator =
-            (Box::new(realistic_message.as_bytes()) as Box<dyn BufRead + Send>).lines();
+        let lines_iterator = (Box::new(realistic_message.as_bytes())).lines();
 
         let mut ti = TimeoutIterator::with_iter(lines_iterator).unwrap();
 
@@ -127,8 +126,7 @@ mod tests {
 3
 4
 5";
-        let lines_iterator =
-            (Box::new(realistic_message.as_bytes()) as Box<dyn BufRead + Send>).lines();
+        let lines_iterator = (Box::new(realistic_message.as_bytes())).lines();
 
         let mut ti = TimeoutIterator::with_iter(lines_iterator).unwrap();
 
@@ -149,8 +147,7 @@ mod tests {
 3
 4
 5";
-        let lines_iterator =
-            (Box::new(realistic_message.as_bytes()) as Box<dyn BufRead + Send>).lines();
+        let lines_iterator = (Box::new(realistic_message.as_bytes())).lines();
         let mut ti = TimeoutIterator::with_iter(lines_iterator).unwrap();
 
         assert_eq!(ti.next().unwrap().unwrap(), "1");
@@ -194,8 +191,7 @@ mod tests {
 3
 4
 5";
-        let lines_iterator =
-            (Box::new(realistic_message.as_bytes()) as Box<dyn BufRead + Send>).lines();
+        let lines_iterator = (Box::new(realistic_message.as_bytes())).lines();
         let mut ti = TimeoutIterator::with_iter(lines_iterator).unwrap();
 
         assert_eq!(ti.next().unwrap().unwrap(), "1");

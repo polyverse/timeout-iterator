@@ -72,7 +72,7 @@ impl<R: Stream> Stream for TimeoutStream<R> {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "async"))]
 mod tests {
     use super::*;
     use assert_matches::assert_matches;
@@ -86,8 +86,7 @@ mod tests {
 3
 4
 5";
-        let lines_iterator =
-            iter((Box::new(realistic_message.as_bytes()) as Box<dyn BufRead>).lines());
+        let lines_iterator = iter((Box::new(realistic_message.as_bytes())).lines());
 
         let mut ti = TimeoutStream::with_stream(lines_iterator).await.unwrap();
 
@@ -105,8 +104,7 @@ mod tests {
 3
 4
 5";
-        let lines_iterator =
-            iter((Box::new(realistic_message.as_bytes()) as Box<dyn BufRead>).lines());
+        let lines_iterator = iter((Box::new(realistic_message.as_bytes())).lines());
 
         let mut pinned_stream = Box::pin(TimeoutStream::with_stream(lines_iterator).await.unwrap());
         let mut ti = pinned_stream.as_mut();
@@ -128,8 +126,7 @@ mod tests {
 3
 4
 5";
-        let lines_iterator =
-            iter((Box::new(realistic_message.as_bytes()) as Box<dyn BufRead>).lines());
+        let lines_iterator = iter((Box::new(realistic_message.as_bytes())).lines());
 
         let mut ti = Box::pin(TimeoutStream::with_stream(lines_iterator).await.unwrap());
 
@@ -177,8 +174,7 @@ mod tests {
 3
 4
 5";
-        let lines_iterator =
-            iter((Box::new(realistic_message.as_bytes()) as Box<dyn BufRead>).lines());
+        let lines_iterator = iter((Box::new(realistic_message.as_bytes())).lines());
 
         let mut ti = Box::pin(TimeoutStream::with_stream(lines_iterator).await.unwrap());
 
