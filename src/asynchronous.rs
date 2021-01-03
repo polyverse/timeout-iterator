@@ -25,10 +25,7 @@ impl<R: Stream> TimeoutStream<R> {
         })
     }
 
-    pub async fn peek_timeout(&mut self, duration: Duration) -> Result<&R::Item, Error>
-    where
-        Self: Unpin,
-    {
+    pub async fn peek_timeout(self: Pin<&mut Self>, duration: Duration) -> Result<&R::Item, Error> {
         // Wrap the future with a `Timeout` set to expire in 10 milliseconds.
         match timeout(duration, self.peek()).await {
             Ok(Some(item)) => Ok(item),
@@ -37,10 +34,10 @@ impl<R: Stream> TimeoutStream<R> {
         }
     }
 
-    pub async fn next_timeout(&mut self, duration: Duration) -> Result<R::Item, Error>
-    where
-        Self: Unpin,
-    {
+    pub async fn next_timeout(
+        mut self: Pin<&mut Self>,
+        duration: Duration,
+    ) -> Result<R::Item, Error> {
         // Wrap the future with a `Timeout` set to expire in 10 milliseconds.
         match timeout(duration, self.next()).await {
             Ok(Some(item)) => Ok(item),
@@ -49,17 +46,14 @@ impl<R: Stream> TimeoutStream<R> {
         }
     }
 
-    pub async fn peek(&mut self) -> Option<&R::Item>
-    where
-        Self: Unpin,
-    {
-        if self.buffer.is_empty() {
+    pub async fn peek(mut self: Pin<&mut Self>) -> Option<&R::Item> {
+        if self.as_mut().project().buffer.is_empty() {
             match self.next().await {
-                Some(item) => self.buffer.push(item),
+                Some(item) => self.as_mut().project().buffer.push(item),
                 None => return None,
             }
         }
-        self.buffer.first()
+        self.project().buffer.first()
     }
 }
 
@@ -114,7 +108,8 @@ mod tests {
         let lines_iterator =
             iter((Box::new(realistic_message.as_bytes()) as Box<dyn BufRead>).lines());
 
-        let mut ti = Box::pin(TimeoutStream::with_stream(lines_iterator).await.unwrap());
+        let mut pinned_stream = Box::pin(TimeoutStream::with_stream(lines_iterator).await.unwrap());
+        let mut ti = pinned_stream.as_mut();
 
         assert_eq!(ti.next().await.unwrap().unwrap(), "1");
         assert_eq!(ti.next().await.unwrap().unwrap(), "2");
@@ -141,17 +136,19 @@ mod tests {
         assert_eq!(ti.next().await.unwrap().unwrap(), "1");
         assert_eq!(ti.next().await.unwrap().unwrap(), "2");
         assert_eq!(
-            ti.peek_timeout(Duration::from_secs(1))
+            ti.as_mut()
+                .peek_timeout(Duration::from_secs(1))
                 .await
                 .unwrap()
                 .as_ref()
                 .unwrap(),
             "3"
         );
-        assert_eq!(ti.next().await.unwrap().unwrap(), "3");
-        assert_eq!(ti.next().await.unwrap().unwrap(), "4");
+        assert_eq!(ti.as_mut().next().await.unwrap().unwrap(), "3");
+        assert_eq!(ti.as_mut().next().await.unwrap().unwrap(), "4");
         assert_eq!(
-            ti.peek_timeout(Duration::from_secs(1))
+            ti.as_mut()
+                .peek_timeout(Duration::from_secs(1))
                 .await
                 .unwrap()
                 .as_ref()
@@ -159,16 +156,17 @@ mod tests {
             "5"
         );
         assert_eq!(
-            ti.peek_timeout(Duration::from_secs(1))
+            ti.as_mut()
+                .peek_timeout(Duration::from_secs(1))
                 .await
                 .unwrap()
                 .as_ref()
                 .unwrap(),
             "5"
         );
-        assert_eq!(ti.next().await.unwrap().unwrap(), "5");
+        assert_eq!(ti.as_mut().next().await.unwrap().unwrap(), "5");
 
-        let timeout_result = ti.next_timeout(Duration::from_secs(1)).await;
+        let timeout_result = ti.as_mut().next_timeout(Duration::from_secs(1)).await;
         assert!(timeout_result.is_err());
     }
 
@@ -182,33 +180,35 @@ mod tests {
         let lines_iterator =
             iter((Box::new(realistic_message.as_bytes()) as Box<dyn BufRead>).lines());
 
-        let mut ti = TimeoutStream::with_stream(lines_iterator).await.unwrap();
+        let mut ti = Box::pin(TimeoutStream::with_stream(lines_iterator).await.unwrap());
 
-        assert_eq!(ti.next().await.unwrap().unwrap(), "1");
-        assert_eq!(ti.next().await.unwrap().unwrap(), "2");
-        assert_eq!(ti.peek().await.unwrap().as_ref().unwrap(), "3");
+        assert_eq!(ti.as_mut().next().await.unwrap().unwrap(), "1");
+        assert_eq!(ti.as_mut().next().await.unwrap().unwrap(), "2");
+        assert_eq!(ti.as_mut().peek().await.unwrap().as_ref().unwrap(), "3");
         assert_eq!(
-            ti.peek_timeout(Duration::from_secs(1))
+            ti.as_mut()
+                .peek_timeout(Duration::from_secs(1))
                 .await
                 .unwrap()
                 .as_ref()
                 .unwrap(),
             "3"
         );
-        assert_eq!(ti.next().await.unwrap().unwrap(), "3");
-        assert_eq!(ti.next().await.unwrap().unwrap(), "4");
+        assert_eq!(ti.as_mut().next().await.unwrap().unwrap(), "3");
+        assert_eq!(ti.as_mut().next().await.unwrap().unwrap(), "4");
         assert_eq!(
-            ti.peek_timeout(Duration::from_secs(1))
+            ti.as_mut()
+                .peek_timeout(Duration::from_secs(1))
                 .await
                 .unwrap()
                 .as_ref()
                 .unwrap(),
             "5"
         );
-        assert_eq!(ti.peek().await.unwrap().as_ref().unwrap(), "5");
-        assert_eq!(ti.next().await.unwrap().unwrap(), "5");
+        assert_eq!(ti.as_mut().peek().await.unwrap().as_ref().unwrap(), "5");
+        assert_eq!(ti.as_mut().next().await.unwrap().unwrap(), "5");
 
-        let timeout_result = ti.next_timeout(Duration::from_secs(1)).await;
+        let timeout_result = ti.as_mut().next_timeout(Duration::from_secs(1)).await;
         assert!(timeout_result.is_err());
     }
 
@@ -216,20 +216,40 @@ mod tests {
     async fn item_iterator() {
         let numbers: Vec<u32> = vec![1, 2, 3, 4, 5];
 
-        let mut ti = TimeoutStream::with_stream(iter(numbers.into_iter()))
-            .await
-            .unwrap();
+        let mut ti = Box::pin(
+            TimeoutStream::with_stream(iter(numbers.into_iter()))
+                .await
+                .unwrap(),
+        );
 
-        assert_eq!(ti.next().await.unwrap(), 1);
-        assert_eq!(ti.next().await.unwrap(), 2);
-        assert_eq!(*ti.peek_timeout(Duration::from_secs(1)).await.unwrap(), 3);
-        assert_eq!(ti.next().await.unwrap(), 3);
-        assert_eq!(ti.next().await.unwrap(), 4);
-        assert_eq!(*ti.peek_timeout(Duration::from_secs(1)).await.unwrap(), 5);
-        assert_eq!(*ti.peek_timeout(Duration::from_secs(1)).await.unwrap(), 5);
-        assert_eq!(ti.next().await.unwrap(), 5);
+        assert_eq!(ti.as_mut().next().await.unwrap(), 1);
+        assert_eq!(ti.as_mut().next().await.unwrap(), 2);
+        assert_eq!(
+            *ti.as_mut()
+                .peek_timeout(Duration::from_secs(1))
+                .await
+                .unwrap(),
+            3
+        );
+        assert_eq!(ti.as_mut().next().await.unwrap(), 3);
+        assert_eq!(ti.as_mut().next().await.unwrap(), 4);
+        assert_eq!(
+            *ti.as_mut()
+                .peek_timeout(Duration::from_secs(1))
+                .await
+                .unwrap(),
+            5
+        );
+        assert_eq!(
+            *ti.as_mut()
+                .peek_timeout(Duration::from_secs(1))
+                .await
+                .unwrap(),
+            5
+        );
+        assert_eq!(ti.as_mut().next().await.unwrap(), 5);
 
-        let timeout_result = ti.next_timeout(Duration::from_secs(1)).await;
+        let timeout_result = ti.as_mut().next_timeout(Duration::from_secs(1)).await;
         assert!(timeout_result.is_err());
     }
 
@@ -243,70 +263,81 @@ mod tests {
                 .throttle(Duration::from_secs(1)),
         );
 
-        let mut ti = TimeoutStream::with_stream(throttled_numbers).await.unwrap();
+        let mut pinned_stream =
+            Box::pin(TimeoutStream::with_stream(throttled_numbers).await.unwrap());
+        let mut ti = pinned_stream.as_mut();
 
-        assert_eq!(ti.next().await.unwrap(), 1);
+        assert_eq!(ti.as_mut().next().await.unwrap(), 1);
         assert_matches!(
-            ti.next_timeout(Duration::from_millis(500))
+            ti.as_mut()
+                .next_timeout(Duration::from_millis(500))
                 .await
                 .unwrap_err(),
             Error::TimedOut
         );
-        assert_eq!(ti.next().await.unwrap(), 2);
+        assert_eq!(ti.as_mut().next().await.unwrap(), 2);
         assert_matches!(
-            ti.peek_timeout(Duration::from_millis(500))
+            ti.as_mut()
+                .peek_timeout(Duration::from_millis(500))
                 .await
                 .unwrap_err(),
             Error::TimedOut
         );
-        assert_eq!(*ti.peek().await.unwrap(), 3);
-        assert_eq!(ti.next().await.unwrap(), 3);
+        assert_eq!(*ti.as_mut().peek().await.unwrap(), 3);
+        assert_eq!(ti.as_mut().next().await.unwrap(), 3);
         assert_matches!(
-            ti.next_timeout(Duration::from_millis(500))
+            ti.as_mut()
+                .next_timeout(Duration::from_millis(500))
                 .await
                 .unwrap_err(),
             Error::TimedOut
         );
-        assert_eq!(ti.next().await.unwrap(), 4);
+        assert_eq!(ti.as_mut().next().await.unwrap(), 4);
         assert_matches!(
-            ti.next_timeout(Duration::from_millis(100))
-                .await
-                .unwrap_err(),
-            Error::TimedOut
-        );
-        assert_matches!(
-            ti.next_timeout(Duration::from_millis(100))
-                .await
-                .unwrap_err(),
-            Error::TimedOut
-        );
-        assert_matches!(
-            ti.next_timeout(Duration::from_millis(100))
+            ti.as_mut()
+                .next_timeout(Duration::from_millis(100))
                 .await
                 .unwrap_err(),
             Error::TimedOut
         );
         assert_matches!(
-            ti.next_timeout(Duration::from_millis(100))
+            ti.as_mut()
+                .next_timeout(Duration::from_millis(100))
                 .await
                 .unwrap_err(),
             Error::TimedOut
         );
         assert_matches!(
-            ti.next_timeout(Duration::from_millis(100))
+            ti.as_mut()
+                .next_timeout(Duration::from_millis(100))
                 .await
                 .unwrap_err(),
             Error::TimedOut
         );
         assert_matches!(
-            ti.next_timeout(Duration::from_millis(100))
+            ti.as_mut()
+                .next_timeout(Duration::from_millis(100))
                 .await
                 .unwrap_err(),
             Error::TimedOut
         );
-        assert_eq!(ti.next().await.unwrap(), 5);
+        assert_matches!(
+            ti.as_mut()
+                .next_timeout(Duration::from_millis(100))
+                .await
+                .unwrap_err(),
+            Error::TimedOut
+        );
+        assert_matches!(
+            ti.as_mut()
+                .next_timeout(Duration::from_millis(100))
+                .await
+                .unwrap_err(),
+            Error::TimedOut
+        );
+        assert_eq!(ti.as_mut().next().await.unwrap(), 5);
 
-        let timeout_result = ti.next_timeout(Duration::from_secs(1)).await;
+        let timeout_result = ti.as_mut().next_timeout(Duration::from_secs(1)).await;
         assert!(timeout_result.is_err());
     }
 }
