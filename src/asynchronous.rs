@@ -1,37 +1,34 @@
+use crate::error::Error;
 use core::pin::Pin;
 use futures::stream::Stream;
 use futures::task::{Context, Poll};
+use pin_project::pin_project;
 use std::time::Duration;
 use tokio::time::timeout;
 use tokio_stream::StreamExt;
 
-use crate::error::Error;
-
-pub struct TimeoutStream<T, R>
-where
-    T: Unpin,
-    R: Stream<Item = T> + Unpin,
-{
+#[pin_project]
+pub struct TimeoutStream<R: Stream> {
+    #[pin]
     source: R,
-    buffer: Vec<T>,
+    buffer: Vec<R::Item>,
 }
 
-impl<T, R> TimeoutStream<T, R>
-where
-    T: Unpin,
-    R: Stream<Item = T> + Unpin,
-{
+impl<R: Stream> TimeoutStream<R> {
     /**
      * Use this constructor
      */
-    pub async fn with_stream(source: R) -> Result<TimeoutStream<T, R>, Error> {
+    pub async fn with_stream(source: R) -> Result<TimeoutStream<R>, Error> {
         Ok(TimeoutStream {
             source,
             buffer: Vec::new(),
         })
     }
 
-    pub async fn peek_timeout(&mut self, duration: Duration) -> Result<&T, Error> {
+    pub async fn peek_timeout(&mut self, duration: Duration) -> Result<&R::Item, Error>
+    where
+        Self: Unpin,
+    {
         // Wrap the future with a `Timeout` set to expire in 10 milliseconds.
         match timeout(duration, self.peek()).await {
             Ok(Some(item)) => Ok(item),
@@ -40,7 +37,10 @@ where
         }
     }
 
-    pub async fn next_timeout(&mut self, duration: Duration) -> Result<T, Error> {
+    pub async fn next_timeout(&mut self, duration: Duration) -> Result<R::Item, Error>
+    where
+        Self: Unpin,
+    {
         // Wrap the future with a `Timeout` set to expire in 10 milliseconds.
         match timeout(duration, self.next()).await {
             Ok(Some(item)) => Ok(item),
@@ -49,7 +49,10 @@ where
         }
     }
 
-    pub async fn peek(&mut self) -> Option<&T> {
+    pub async fn peek(&mut self) -> Option<&R::Item>
+    where
+        Self: Unpin,
+    {
         if self.buffer.is_empty() {
             match self.next().await {
                 Some(item) => self.buffer.push(item),
@@ -60,21 +63,18 @@ where
     }
 }
 
-impl<T, R> Stream for TimeoutStream<T, R>
-where
-    T: Unpin,
-    R: Stream<Item = T> + Unpin,
-{
-    type Item = T;
+impl<R: Stream> Stream for TimeoutStream<R> {
+    type Item = R::Item;
+
     fn poll_next(
-        mut self: Pin<&mut Self>,
+        self: Pin<&mut Self>,
         cx: &mut Context<'_>,
     ) -> Poll<Option<<Self as Stream>::Item>> {
         if !self.buffer.is_empty() {
-            return Poll::Ready(Some(self.buffer.remove(0)));
+            return Poll::Ready(Some(self.project().buffer.remove(0)));
         }
 
-        Pin::new(&mut self.as_mut().source).poll_next(cx)
+        self.project().source.poll_next(cx)
     }
 }
 
@@ -114,7 +114,7 @@ mod tests {
         let lines_iterator =
             iter((Box::new(realistic_message.as_bytes()) as Box<dyn BufRead>).lines());
 
-        let mut ti = TimeoutStream::with_stream(lines_iterator).await.unwrap();
+        let mut ti = Box::pin(TimeoutStream::with_stream(lines_iterator).await.unwrap());
 
         assert_eq!(ti.next().await.unwrap().unwrap(), "1");
         assert_eq!(ti.next().await.unwrap().unwrap(), "2");
@@ -122,7 +122,7 @@ mod tests {
         assert_eq!(ti.next().await.unwrap().unwrap(), "4");
         assert_eq!(ti.next().await.unwrap().unwrap(), "5");
 
-        let timeout_result = ti.next_timeout(Duration::from_secs(1)).await;
+        let timeout_result = ti.as_mut().next_timeout(Duration::from_secs(1)).await;
         assert!(timeout_result.is_err());
     }
 
@@ -136,7 +136,7 @@ mod tests {
         let lines_iterator =
             iter((Box::new(realistic_message.as_bytes()) as Box<dyn BufRead>).lines());
 
-        let mut ti = TimeoutStream::with_stream(lines_iterator).await.unwrap();
+        let mut ti = Box::pin(TimeoutStream::with_stream(lines_iterator).await.unwrap());
 
         assert_eq!(ti.next().await.unwrap().unwrap(), "1");
         assert_eq!(ti.next().await.unwrap().unwrap(), "2");
