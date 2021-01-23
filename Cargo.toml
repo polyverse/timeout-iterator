@@ -33,3 +33,6 @@ pin-project = { version = "1.0.2", optional = true }
 [dev-dependencies]
 tokio = { version = "1.0.1", features = ["time", "rt", "macros"]}
 assert_matches = "1.4.0"
+
+[package.metadata.cargo-all-features]
+skip_optional_dependencies = true
