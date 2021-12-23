@@ -1,8 +1,9 @@
 [package]
 name = "timeout-iterator"
-version = "1.1.5"
+version = "1.1.6"
 authors = ["Archis Gore <archis@polyverse.io>"]
 edition = "2018"
+license = "Apache 2.0"
 license-file = "LICENSE"
 categories = ["asynchronous", "caching", "rust-patterns"]
 keywords = ["iterator", "wrapper", "timeout", "peek", "buffer"]
